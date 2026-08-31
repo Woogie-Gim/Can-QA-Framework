@@ -1,29 +1,39 @@
 import time
 
 import can
+import cantools
 
-# 차속 메시지 ID
-MSG_ID_VEHICLE_SPEED = 0x100
+# DBC 경로
+DBC_PATH = "dbc/vehicle.dbc"
 # 송신 주기 (초)
-CYCLE_TIME = 0.5
-
-
-def encode_speed(kph: float) -> bytes:
-    # 0.1 km/h 단위 2바이트로 인코딩
-    raw = int(kph / 0.1)
-    return bytes([(raw >> 8) & 0xFF, raw & 0xFF, 0, 0, 0, 0, 0, 0])
+CYCLE_TIME = 0.1
 
 
 def main():
+    db = cantools.database.load_file(DBC_PATH)
+    msg_def = db.get_message_by_name("VehicleStatus")
+
+    counter = 0
     with can.Bus(channel="vcan0", interface="socketcan") as bus:
-        for kph in range(0, 121, 10):
-            msg = can.Message(
-                arbitration_id=MSG_ID_VEHICLE_SPEED,
-                data=encode_speed(kph),
-                is_extended_id=False,
+        for kph in range(0, 121, 5):
+            # 신호를 이름과 실제 단위로 지정
+            signals = {
+                "VehicleSpeed": kph,
+                "EngineRPM": 800 + kph * 20,
+                "GearPosition": 4 if kph > 0 else 0,
+                "AliveCounter": counter,
+                "Checksum": 0,
+            }
+            data = msg_def.encode(signals)
+            bus.send(
+                can.Message(
+                    arbitration_id=msg_def.frame_id,
+                    data=data,
+                    is_extended_id=False,
+                )
             )
-            bus.send(msg)
-            print(f"송신 차속={kph} km/h")
+            print(f"송신 속도={kph} RPM={signals['EngineRPM']} 카운터={counter}")
+            counter = (counter + 1) % 16
             time.sleep(CYCLE_TIME)
 
 

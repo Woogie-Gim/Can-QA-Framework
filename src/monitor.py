@@ -1,17 +1,23 @@
 import can
+import cantools
+
+DBC_PATH = "dbc/vehicle.dbc"
 
 
 def main():
-    # vcan0 버스에 연결
+    db = cantools.database.load_file(DBC_PATH)
+
     with can.Bus(channel="vcan0", interface="socketcan") as bus:
         print("수신 대기 중. Ctrl+C 로 종료")
-        # 버스를 순회하며 프레임 수신
         for msg in bus:
-            frame_id = f"0x{msg.arbitration_id:03X}"
-            payload = msg.data.hex(" ").upper()
-            print(f"[{msg.timestamp:.3f}] ID={frame_id} DLC={msg.dlc} DATA={payload}")
+            try:
+                decoded = db.decode_message(msg.arbitration_id, msg.data)
+            except KeyError:
+                # DBC에 정의되지 않은 ID는 건너뜀
+                continue
+            name = db.get_message_by_frame_id(msg.arbitration_id).name
+            print(f"[{msg.timestamp:.3f}] {name} {decoded}")
 
 
 if __name__ == "__main__":
     main()
-

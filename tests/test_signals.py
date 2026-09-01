@@ -15,10 +15,7 @@ COLLECT_DURATION = 3.0
 @pytest.fixture(scope="module")
 def frames():
     collector = Collector()
-    data = collector.collect(COLLECT_DURATION)
-    if not data:
-        pytest.fail("프레임 미수신. 시뮬레이터가 동작 중인지 확인 필요")
-    return data
+    return collector.collect(COLLECT_DURATION)
 
 
 @pytest.fixture(scope="module")
@@ -37,6 +34,8 @@ def test_message_received(frames):
 
 def test_cycle_time(frames):
     # 송신 주기가 규격 범위 내여야 함
+    if not vehicle_status(frames):
+        pytest.skip("프레임 미수신으로 검증 불가")
     targets = vehicle_status(frames)
     intervals = [
         (b.timestamp - a.timestamp) * 1000
@@ -54,6 +53,8 @@ def test_cycle_time(frames):
 )
 def test_signal_range(frames, collector, signal_name):
     # 모든 신호 값이 DBC 정의 범위 내여야 함
+    if not vehicle_status(frames):
+        pytest.skip("프레임 미수신으로 검증 불가")
     low, high = collector.signal_spec("VehicleStatus", signal_name)
     for frame in vehicle_status(frames):
         value = frame.signals[signal_name]
@@ -64,6 +65,8 @@ def test_signal_range(frames, collector, signal_name):
 
 def test_alive_counter_increments(frames):
     # 롤링 카운터가 매 프레임 1씩 증가해야 함
+    if not vehicle_status(frames):
+        pytest.skip("프레임 미수신으로 검증 불가")
     values = [f.signals["AliveCounter"] for f in vehicle_status(frames)]
     for prev, curr in zip(values, values[1:]):
         expected = (prev + 1) % 16

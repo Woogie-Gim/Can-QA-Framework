@@ -54,6 +54,7 @@ def main():
     counter = 0
     print(f"송신 시작 (결함={args.fault}, 주기={cycle * 1000:.0f}ms)")
     with can.Bus(channel="vcan0", interface="socketcan") as bus:
+        next_send = time.perf_counter()
         while True:
             for kph in range(0, 121, 5):
                 signals = build_signals(kph, counter, args.fault)
@@ -67,7 +68,9 @@ def main():
                     )
                 )
                 counter = (counter + 1) % 16
-                time.sleep(cycle)
+                # 처리 시간을 보정해 목표 주기 유지
+                next_send += cycle
+                time.sleep(max(0, next_send - time.perf_counter()))
 
 
 if __name__ == "__main__":

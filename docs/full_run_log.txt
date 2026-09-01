@@ -1,0 +1,205 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.4, pytest-9.1.1, pluggy-1.6.0 -- /home/seonwook/can-qa-framework/venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/seonwook/can-qa-framework
+configfile: pytest.ini
+testpaths: tests
+collecting ... collected 7 items
+
+tests/test_signals.py::test_message_received PASSED                      [ 14%]
+tests/test_signals.py::test_cycle_time PASSED                            [ 28%]
+tests/test_signals.py::test_signal_range[VehicleSpeed] PASSED            [ 42%]
+tests/test_signals.py::test_signal_range[EngineRPM] PASSED               [ 57%]
+tests/test_signals.py::test_signal_range[GearPosition] PASSED            [ 71%]
+tests/test_signals.py::test_signal_range[AliveCounter] PASSED            [ 85%]
+tests/test_signals.py::test_alive_counter_increments PASSED              [100%]
+리포트 생성: reports/report_none_20260901_185024.xlsx
+
+
+============================== 7 passed in 3.07s ===============================
+============================= test session starts ==============================
+platform linux -- Python 3.14.4, pytest-9.1.1, pluggy-1.6.0 -- /home/seonwook/can-qa-framework/venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/seonwook/can-qa-framework
+configfile: pytest.ini
+testpaths: tests
+collecting ... collected 7 items
+
+tests/test_signals.py::test_message_received PASSED                      [ 14%]
+tests/test_signals.py::test_cycle_time PASSED                            [ 28%]
+tests/test_signals.py::test_signal_range[VehicleSpeed] PASSED            [ 42%]
+tests/test_signals.py::test_signal_range[EngineRPM] PASSED               [ 57%]
+tests/test_signals.py::test_signal_range[GearPosition] PASSED            [ 71%]
+tests/test_signals.py::test_signal_range[AliveCounter] PASSED            [ 85%]
+tests/test_signals.py::test_alive_counter_increments FAILED              [100%]
+리포트 생성: reports/report_counter_stuck_20260901_185029.xlsx
+
+
+=================================== FAILURES ===================================
+________________________ test_alive_counter_increments _________________________
+
+frames = [Frame(timestamp=1788256226.4007418, name='VehicleStatus', signals={'VehicleSpeed': 60.0, 'EngineRPM': 2000.0, 'GearPo...tatus', signals={'VehicleSpeed': 85.0, 'EngineRPM': 2500.0, 'GearPosition': 4, 'AliveCounter': 3, 'Checksum': 0}), ...]
+
+    def test_alive_counter_increments(frames):
+        # 롤링 카운터가 매 프레임 1씩 증가해야 함
+        if not vehicle_status(frames):
+            pytest.skip("프레임 미수신으로 검증 불가")
+        values = [f.signals["AliveCounter"] for f in vehicle_status(frames)]
+        for prev, curr in zip(values, values[1:]):
+            expected = (prev + 1) % 16
+>           assert curr == expected, (
+                f"롤링 카운터 불연속: {prev} 다음 {expected} 기대했으나 {curr}"
+            )
+E           AssertionError: 롤링 카운터 불연속: 3 다음 4 기대했으나 3
+E           assert 3 == 4
+
+tests/test_signals.py:73: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_signals.py::test_alive_counter_increments - AssertionError:...
+========================= 1 failed, 6 passed in 3.16s ==========================
+============================= test session starts ==============================
+platform linux -- Python 3.14.4, pytest-9.1.1, pluggy-1.6.0 -- /home/seonwook/can-qa-framework/venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/seonwook/can-qa-framework
+configfile: pytest.ini
+testpaths: tests
+collecting ... collected 7 items
+
+tests/test_signals.py::test_message_received PASSED                      [ 14%]
+tests/test_signals.py::test_cycle_time PASSED                            [ 28%]
+tests/test_signals.py::test_signal_range[VehicleSpeed] PASSED            [ 42%]
+tests/test_signals.py::test_signal_range[EngineRPM] FAILED               [ 57%]
+tests/test_signals.py::test_signal_range[GearPosition] PASSED            [ 71%]
+tests/test_signals.py::test_signal_range[AliveCounter] PASSED            [ 85%]
+tests/test_signals.py::test_alive_counter_increments PASSED              [100%]
+리포트 생성: reports/report_range_over_20260901_185033.xlsx
+
+
+=================================== FAILURES ===================================
+_________________________ test_signal_range[EngineRPM] _________________________
+
+frames = [Frame(timestamp=1788256230.7087815, name='VehicleStatus', signals={'VehicleSpeed': 60.0, 'EngineRPM': 9000.0, 'GearPo...tatus', signals={'VehicleSpeed': 85.0, 'EngineRPM': 9000.0, 'GearPosition': 4, 'AliveCounter': 1, 'Checksum': 0}), ...]
+collector = <src.collector.Collector object at 0x712c5762f890>
+signal_name = 'EngineRPM'
+
+    @pytest.mark.parametrize(
+        "signal_name",
+        ["VehicleSpeed", "EngineRPM", "GearPosition", "AliveCounter"],
+    )
+    def test_signal_range(frames, collector, signal_name):
+        # 모든 신호 값이 DBC 정의 범위 내여야 함
+        if not vehicle_status(frames):
+            pytest.skip("프레임 미수신으로 검증 불가")
+        low, high = collector.signal_spec("VehicleStatus", signal_name)
+        for frame in vehicle_status(frames):
+            value = frame.signals[signal_name]
+>           assert low <= value <= high, (
+                f"{signal_name}={value} 가 규격 범위 [{low}, {high}] 이탈"
+            )
+E           AssertionError: EngineRPM=9000.0 가 규격 범위 [0, 8000] 이탈
+E           assert 9000.0 <= 8000
+
+tests/test_signals.py:61: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_signals.py::test_signal_range[EngineRPM] - AssertionError: ...
+========================= 1 failed, 6 passed in 3.26s ==========================
+============================= test session starts ==============================
+platform linux -- Python 3.14.4, pytest-9.1.1, pluggy-1.6.0 -- /home/seonwook/can-qa-framework/venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/seonwook/can-qa-framework
+configfile: pytest.ini
+testpaths: tests
+collecting ... collected 7 items
+
+tests/test_signals.py::test_message_received PASSED                      [ 14%]
+tests/test_signals.py::test_cycle_time FAILED                            [ 28%]
+tests/test_signals.py::test_signal_range[VehicleSpeed] PASSED            [ 42%]
+tests/test_signals.py::test_signal_range[EngineRPM] PASSED               [ 57%]
+tests/test_signals.py::test_signal_range[GearPosition] PASSED            [ 71%]
+tests/test_signals.py::test_signal_range[AliveCounter] PASSED            [ 85%]
+tests/test_signals.py::test_alive_counter_increments PASSED              [100%]
+리포트 생성: reports/report_slow_cycle_20260901_185038.xlsx
+
+
+=================================== FAILURES ===================================
+_______________________________ test_cycle_time ________________________________
+
+frames = [Frame(timestamp=1788256235.6445472, name='VehicleStatus', signals={'VehicleSpeed': 25.0, 'EngineRPM': 1300.0, 'GearPo...atus', signals={'VehicleSpeed': 50.0, 'EngineRPM': 1800.0, 'GearPosition': 4, 'AliveCounter': 10, 'Checksum': 0}), ...]
+
+    def test_cycle_time(frames):
+        # 송신 주기가 규격 범위 내여야 함
+        if not vehicle_status(frames):
+            pytest.skip("프레임 미수신으로 검증 불가")
+        targets = vehicle_status(frames)
+        intervals = [
+            (b.timestamp - a.timestamp) * 1000
+            for a, b in zip(targets, targets[1:])
+        ]
+        avg = statistics.mean(intervals)
+>       assert abs(avg - EXPECTED_CYCLE_MS) <= CYCLE_TOLERANCE_MS, (
+            f"평균 주기 {avg:.1f}ms 가 규격 {EXPECTED_CYCLE_MS}±{CYCLE_TOLERANCE_MS}ms 이탈"
+        )
+E       AssertionError: 평균 주기 298.2ms 가 규격 100±20ms 이탈
+E       assert 198.21698665618896 <= 20
+E        +  where 198.21698665618896 = abs((298.21698665618896 - 100))
+
+tests/test_signals.py:45: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_signals.py::test_cycle_time - AssertionError: 평균 주기 298...
+========================= 1 failed, 6 passed in 3.41s ==========================
+============================= test session starts ==============================
+platform linux -- Python 3.14.4, pytest-9.1.1, pluggy-1.6.0 -- /home/seonwook/can-qa-framework/venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/seonwook/can-qa-framework
+configfile: pytest.ini
+testpaths: tests
+collecting ... collected 7 items
+
+tests/test_signals.py::test_message_received FAILED                      [ 14%]
+tests/test_signals.py::test_cycle_time SKIPPED (프레임 미수신으로 검...) [ 28%]
+tests/test_signals.py::test_signal_range[VehicleSpeed] SKIPPED (프레...) [ 42%]
+tests/test_signals.py::test_signal_range[EngineRPM] SKIPPED (프레임 ...) [ 57%]
+tests/test_signals.py::test_signal_range[GearPosition] SKIPPED (프레...) [ 71%]
+tests/test_signals.py::test_signal_range[AliveCounter] SKIPPED (프레...) [ 85%]
+tests/test_signals.py::test_alive_counter_increments SKIPPED (프레임...) [100%]
+리포트 생성: reports/report_silent_20260901_185043.xlsx
+
+
+=================================== FAILURES ===================================
+____________________________ test_message_received _____________________________
+
+frames = []
+
+    def test_message_received(frames):
+        # VehicleStatus 메시지가 수신되어야 함
+>       assert vehicle_status(frames), "VehicleStatus 미수신"
+E       AssertionError: VehicleStatus 미수신
+E       assert []
+E        +  where [] = vehicle_status([])
+
+tests/test_signals.py:32: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_signals.py::test_message_received - AssertionError: Vehicle...
+========================= 1 failed, 6 skipped in 3.21s =========================
+
+============================================================
+검증 조건: none
+============================================================
+
+============================================================
+검증 조건: counter_stuck
+============================================================
+
+============================================================
+검증 조건: range_over
+============================================================
+
+============================================================
+검증 조건: slow_cycle
+============================================================
+
+============================================================
+검증 조건: silent
+============================================================
+
+전체 조건 검증 완료. reports/ 폴더를 확인하세요.

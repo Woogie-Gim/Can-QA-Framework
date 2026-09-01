@@ -57,11 +57,8 @@ def main():
         while True:
             for kph in range(0, 121, 5):
                 signals = build_signals(kph, counter, args.fault)
-                try:
-                    data = msg_def.encode(signals)
-                except cantools.database.EncodeError:
-                    # 범위 초과 값은 강제로 원시 인코딩
-                    data = msg_def.encode(signals, strict=False)
+                # 범위 초과 값도 그대로 인코딩 (결함 재현 목적)
+                data = msg_def.encode(signals, strict=False)
                 bus.send(
                     can.Message(
                         arbitration_id=msg_def.frame_id,

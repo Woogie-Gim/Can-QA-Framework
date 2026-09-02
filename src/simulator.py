@@ -17,7 +17,8 @@ def build_signals(kph: int, counter: int, fault: str) -> dict:
     signals = {
         "VehicleSpeed": kph,
         "EngineRPM": 800 + kph * 20,
-        "GearPosition": 4 if kph > 0 else 0,
+        # 정차 시 P, 저속 구간 R, 주행 중 D
+        "GearPosition": 0 if kph == 0 else (1 if kph <= 10 else 4),
         "AliveCounter": counter,
         "Checksum": 0,
     }
@@ -50,6 +51,7 @@ def main():
 
     db = cantools.database.load_file(DBC_PATH)
     msg_def = db.get_message_by_name("VehicleStatus")
+    door_def = db.get_message_by_name("DoorStatus")
 
     counter = 0
     print(f"송신 시작 (결함={args.fault}, 주기={cycle * 1000:.0f}ms)")
@@ -67,8 +69,22 @@ def main():
                         is_extended_id=False,
                     )
                 )
+                # 도어 상태 송신 (정차 중에만 열림)
+                door_data = door_def.encode(
+                    {
+                        "DriverDoorOpen": 1 if kph == 0 else 0,
+                        "PassengerDoorOpen": 0,
+                        "TrunkOpen": 0,
+                    }
+                )
+                bus.send(
+                    can.Message(
+                        arbitration_id=door_def.frame_id,
+                        data=door_data,
+                        is_extended_id=False,
+                    )
+                )
                 counter = (counter + 1) % 16
-                # 처리 시간을 보정해 목표 주기 유지
                 next_send += cycle
                 time.sleep(max(0, next_send - time.perf_counter()))
 
